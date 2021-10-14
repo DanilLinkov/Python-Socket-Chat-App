@@ -83,6 +83,12 @@ class Server(threading.Thread):
         for client in self.clientsList:
             client.sendMessageToClient(messageAsTuple)
 
+    def sendMessageToSingleClient(self, clientTo, messageAsTuple):
+        for client in self.clientsList:
+            print(client.clientName)
+            if client.clientName == clientTo:
+                client.sendMessageToClient(messageAsTuple)
+
 
 class ServerSocket(threading.Thread):
     def __init__(self, client, address, clientName, serverInstance):
@@ -99,10 +105,14 @@ class ServerSocket(threading.Thread):
 
             if messageFromClient:
                 messageType = messageFromClient[0]
-                messagePayload = messageFromClient[1]
 
-                if (messageType.value == ActionType.sendMessage.value):
-                    print(messagePayload)
+                if messageType == ActionType.sendMessage:
+                    # Send message to the userTo
+                    toUser = messageFromClient[1].split(":")[0]
+                    actualMessage = messageFromClient[2]
+
+                    self.serverInstance.sendMessageToSingleClient(
+                        toUser, (ActionType.receiveMessage, self.clientName+":"+str(self.serverInstance.clientsList.index(self)), actualMessage))
             else:
                 print(f'Client: {self.clientName} has disconected.')
                 self.serverInstance.removeClientFromClientsList(self)

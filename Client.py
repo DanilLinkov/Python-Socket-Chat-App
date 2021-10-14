@@ -21,6 +21,7 @@ from ActionEnum import ActionType
 
 class Receive(QThread):
     newConnectedUsersList = pyqtSignal(object)
+    newSingleMessage = pyqtSignal(object, object)
 
     def __init__(self, clientInstance):
         QThread.__init__(self)
@@ -41,10 +42,12 @@ class Receive(QThread):
                         print(serverMessage)
 
                         messageType = serverMessage[0]
-                        messagePayload = serverMessage[1]
 
                         if messageType == ActionType.allUsersListUpdate:
-                            self.newConnectedUsersList.emit(messagePayload)
+                            self.newConnectedUsersList.emit(serverMessage[1])
+                        elif messageType == ActionType.receiveMessage:
+                            self.newSingleMessage.emit(
+                                serverMessage[1], serverMessage[2])
                     else:
                         print("Connection shut down.")
                         break
@@ -73,8 +76,30 @@ class Client:
         send(self.clientSocket, messageAsTuple)
 
 
+class SingleChatGUIWindow:
+    def __init__(self, mainInstance, parent, toUserName):
+        self.mainInstance = mainInstance
+        self.toUserName = toUserName
+
+        parent.singleChatGUIWindow = self
+
+        self.oneOnOneDialog = QDialog()
+        self.oneOnOneDialog.ui = oneOnOneDialog()
+        self.oneOnOneDialog.ui.setupUi(self.oneOnOneDialog)
+        self.oneOnOneDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.oneOnOneDialog.ui.sendButton.clicked.connect(
+            self.onSendMessageButtonClick)
+
+        self.oneOnOneDialog.exec_()
+
+    def onSendMessageButtonClick(self):
+        self.mainInstance.clientInstance.sendMessageToServer(
+            (ActionType.sendMessage, self.toUserName, self.oneOnOneDialog.ui.oneOnOneMessageEdit.text()))
+
+
 class ConnectedGUIWindow:
-    def __init__(self, mainInstance, connectedWindowInstance):
+    def __init__(self, mainInstance, parent):
         self.mainInstance = mainInstance
 
         self.connectedDialog = QDialog()
@@ -82,7 +107,12 @@ class ConnectedGUIWindow:
         self.connectedDialog.ui.setupUi(self.connectedDialog)
         self.connectedDialog.setAttribute(Qt.WA_DeleteOnClose)
 
-        connectedWindowInstance.connectedGUIWindow = self
+        self.connectedDialog.ui.oneOnOneChatButton.clicked.connect(
+            self.onSingleChatOpen)
+
+        parent.connectedGUIWindow = self
+
+        self.singleChatGUIWindow = None
 
         self.selectedSingleChatLabel = None
         self.joinedUsersLabelList = []
@@ -90,14 +120,16 @@ class ConnectedGUIWindow:
         self.connectedDialog.exec_()
 
     def onSingleChatOpen(self):
-        pass
+        if self.selectedSingleChatLabel is not None:
+            SingleChatGUIWindow(self.mainInstance, self,
+                                self.selectedSingleChatLabel.text())
 
     def onSingleUserLabelClick(self, label):
         for l in self.joinedUsersLabelList:
             l.setStyleSheet("background-color: white")
 
         label.setStyleSheet("background-color: grey")
-        self.selectedOneOnOne = label
+        self.selectedSingleChatLabel = label
 
     def updateUserLabels(self, newUserList):
         self.clearLayout(self.connectedDialog.ui.clientsListLayout)
@@ -210,11 +242,22 @@ class main():
         self.receivedMessagesThread = Receive(self.clientInstance)
         self.receivedMessagesThread.newConnectedUsersList.connect(
             self.updateUserLabels)
+        self.receivedMessagesThread.newSingleMessage.connect(
+            self.gotSingleMessage)
 
         self.receivedMessagesThread.start()
 
     def updateUserLabels(self, newUserList):
         self.mainGuiWindow.connectedGUIWindow.updateUserLabels(newUserList)
+
+    def gotSingleMessage(self, userFrom, message):
+        # Create new Single chat popup and update messages
+        if self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow is None:
+            SingleChatGUIWindow(
+                self, self.mainGuiWindow.connectedGUIWindow, userFrom)
+            print(message+" <===")
+        else:
+            print("Single message instance already exists!")
 
 
 if __name__ == "__main__":
