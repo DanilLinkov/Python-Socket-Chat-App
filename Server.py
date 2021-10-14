@@ -127,6 +127,13 @@ class Server(threading.Thread):
         for i, client in enumerate(group[1]):
             client.sendMessageToClient(messageAsTuple)
 
+    def findGroupByString(self, groupName):
+        for i, group in enumerate(self.groups):
+            if groupName == "Room "+str(i)+" by "+group[0].clientName:
+                return group
+
+        return None
+
 
 class ServerSocket(threading.Thread):
     def __init__(self, client, address, clientName, serverInstance):
@@ -160,6 +167,14 @@ class ServerSocket(threading.Thread):
                     # Add user to group and let everyone know a new user has joined the group
                     self.serverInstance.addUserToGroup(
                         self, messageFromClient[1])
+
+                elif messageType == ActionType.sendGroup:
+                    toGroup = messageFromClient[1]
+                    actualMessage = messageFromClient[2]
+
+                    group = self.serverInstance.findGroupByString(toGroup)
+                    self.serverInstance.sendMessageToGroup(
+                        group, (ActionType.receiveGroup, self.clientName, actualMessage))
 
             else:
                 print(f'Client: {self.clientName} has disconected.')

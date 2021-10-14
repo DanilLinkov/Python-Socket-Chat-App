@@ -24,6 +24,7 @@ class Receive(QThread):
     newSingleMessage = pyqtSignal(object, object)
     newGroupsList = pyqtSignal(object)
     newUserListInGroup = pyqtSignal(object)
+    newGroupMessage = pyqtSignal(object, object)
 
     def __init__(self, clientInstance):
         QThread.__init__(self)
@@ -55,7 +56,8 @@ class Receive(QThread):
                         elif messageType == ActionType.groupUsersListUpdate:
                             self.newUserListInGroup.emit(serverMessage[1])
                         elif messageType == ActionType.receiveGroup:
-                            pass
+                            self.newGroupMessage.emit(
+                                serverMessage[1], serverMessage[2])
 
                     else:
                         print("Connection shut down.")
@@ -166,15 +168,27 @@ class GroupChatGUIWindow:
             self.groupChatDialog.ui.membersListLayout.addWidget(newUserLabel)
 
     def onSendGroupMessageButtonClick(self):
-        pass
-        # self.mainInstance.clientInstance.sendMessageToServer(
-        #     (ActionType.sendMessage, self.toUserName, self.oneOnOneDialog.ui.oneOnOneMessageEdit.text()))
+        self.mainInstance.clientInstance.sendMessageToServer(
+            (ActionType.sendGroup, self.groupName, self.groupChatDialog.ui.groupMessageEdit.text()))
 
         # self.appendMessageLabel(self.mainInstance.clientInstance.clientName,
-        #                         self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
+        #                         self.oneOnOneDialog.ui.groupMessageEdit.text())
 
-    def appendMessageLabel(self):
-        pass
+    def appendMessageLabel(self, userName, message):
+        self.groupChatDialog.ui.messagesScrollLayoutGroup.setAlignment(
+            Qt.AlignTop)
+
+        newMessageLabel = QLabel()
+        font = QFont()
+        font.setPointSize(15)
+        newMessageLabel.setFont(font)
+        newMessageLabel.setObjectName(userName)
+        newMessageLabel.setText(userName.split(":")[0]+" => "+message)
+
+        newMessageLabel.setFixedSize(200, 50)
+
+        self.groupChatDialog.ui.messagesScrollLayoutGroup.addWidget(
+            newMessageLabel)
 
     def clearLayout(self, layoutToClear):
         for i in reversed(range(layoutToClear.count())):
@@ -390,6 +404,9 @@ class main():
         self.receivedMessagesThread.newUserListInGroup.connect(
             self.updateUsersInGroupLabels)
 
+        self.receivedMessagesThread.newGroupMessage.connect(
+            self.gotGroupMessage)
+
         self.receivedMessagesThread.start()
 
     def updateUserLabels(self, newUserList):
@@ -410,6 +427,10 @@ class main():
     def updateUsersInGroupLabels(self, newUserListIngroup):
         self.mainGuiWindow.connectedGUIWindow.groupChatGUIWindow.updateUsersInGroupLabels(
             newUserListIngroup)
+
+    def gotGroupMessage(self, userFrom, message):
+        self.mainGuiWindow.connectedGUIWindow.groupChatGUIWindow.appendMessageLabel(
+            userFrom, message)
 
 
 if __name__ == "__main__":
