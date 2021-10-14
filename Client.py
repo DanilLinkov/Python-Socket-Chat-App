@@ -23,6 +23,7 @@ class Receive(QThread):
     newConnectedUsersList = pyqtSignal(object)
     newSingleMessage = pyqtSignal(object, object)
     newGroupsList = pyqtSignal(object)
+    newUserListInGroup = pyqtSignal(object)
 
     def __init__(self, clientInstance):
         QThread.__init__(self)
@@ -52,7 +53,7 @@ class Receive(QThread):
                         elif messageType == ActionType.createRoom:
                             self.newGroupsList.emit(serverMessage[1])
                         elif messageType == ActionType.groupUsersListUpdate:
-                            print(serverMessage[1])
+                            self.newUserListInGroup.emit(serverMessage[1])
                         elif messageType == ActionType.receiveGroup:
                             pass
 
@@ -144,7 +145,25 @@ class GroupChatGUIWindow:
         self.groupChatDialog.exec_()
 
     def updateUsersInGroupLabels(self, newUserList):
-        pass
+        self.clearLayout(self.groupChatDialog.ui.membersListLayout)
+        self.usersInGroupLabelList = []
+
+        self.groupChatDialog.ui.membersListLayout.setAlignment(
+            Qt.AlignTop)
+
+        for user in newUserList:
+            newUserLabel = QLabel()
+            font = QFont()
+            font.setPointSize(15)
+            newUserLabel.setFont(font)
+            newUserLabel.setObjectName(user)
+            newUserLabel.setText(user)
+
+            self.usersInGroupLabelList.append(newUserLabel)
+
+            newUserLabel.setFixedSize(200, 50)
+
+            self.groupChatDialog.ui.membersListLayout.addWidget(newUserLabel)
 
     def onSendGroupMessageButtonClick(self):
         pass
@@ -368,6 +387,8 @@ class main():
             self.gotSingleMessage)
         self.receivedMessagesThread.newGroupsList.connect(
             self.updateGroupLabels)
+        self.receivedMessagesThread.newUserListInGroup.connect(
+            self.updateUsersInGroupLabels)
 
         self.receivedMessagesThread.start()
 
@@ -385,6 +406,10 @@ class main():
 
     def updateGroupLabels(self, newGroupsList):
         self.mainGuiWindow.connectedGUIWindow.updateGroupLabels(newGroupsList)
+
+    def updateUsersInGroupLabels(self, newUserListIngroup):
+        self.mainGuiWindow.connectedGUIWindow.groupChatGUIWindow.updateUsersInGroupLabels(
+            newUserListIngroup)
 
 
 if __name__ == "__main__":
