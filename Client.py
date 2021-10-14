@@ -19,6 +19,37 @@ from Utils import *
 from ActionEnum import ActionType
 
 
+class Receive(QThread):
+    newConnectedUsersList = pyqtSignal(object)
+
+    def __init__(self, clientInstance):
+        QThread.__init__(self)
+
+        self.clientInstance = clientInstance
+
+    def run(self):
+        while True:
+            readable, writeable, exceptional = select.select(
+                [self.clientInstance.clientSocket], [], [])
+
+            # Only one socket which is the client socket so only 1 iteration ever
+            for sock in readable:
+                if sock == self.clientInstance.clientSocket:
+                    serverMessage = receive(sock)
+
+                    if serverMessage:
+                        print(serverMessage)
+
+                        messageType = serverMessage[0]
+                        messagePayload = serverMessage[1]
+
+                        if messageType == ActionType.allUsersListUpdate:
+                            self.newConnectedUsersList.emit(messagePayload)
+                    else:
+                        print("Connection shut down.")
+                        break
+
+
 class Client:
     def __init__(self, host, port, clientName):
         self.host = host
@@ -34,7 +65,7 @@ class Client:
         self.clientSocket.connect((self.host, self.port))
 
         # Send the server the client's name
-        send(self.clientSocket, self.clientName)
+        self.sendMessageToServer(self.clientName)
 
         print(f'Connected to {self.host}:{self.port} as {self.clientName}.')
 
@@ -43,7 +74,7 @@ class Client:
 
 
 class ConnectedGUIWindow:
-    def __init__(self, mainInstance):
+    def __init__(self, mainInstance, connectedWindowInstance):
         self.mainInstance = mainInstance
 
         self.connectedDialog = QDialog()
@@ -51,15 +82,78 @@ class ConnectedGUIWindow:
         self.connectedDialog.ui.setupUi(self.connectedDialog)
         self.connectedDialog.setAttribute(Qt.WA_DeleteOnClose)
 
+        connectedWindowInstance.connectedGUIWindow = self
+
+        self.selectedSingleChatLabel = None
+        self.joinedUsersLabelList = []
+
         self.connectedDialog.exec_()
 
     def onSingleChatOpen(self):
         pass
 
+    def onSingleUserLabelClick(self, label):
+        for l in self.joinedUsersLabelList:
+            l.setStyleSheet("background-color: white")
+
+        label.setStyleSheet("background-color: grey")
+        self.selectedOneOnOne = label
+
+    def updateUserLabels(self, newUserList):
+        self.clearLayout(self.connectedDialog.ui.clientsListLayout)
+
+        self.connectedDialog.ui.clientsListLayout.setAlignment(
+            Qt.AlignTop)
+
+        for user in newUserList:
+            newUserLabel = QLabel()
+            font = QFont()
+            font.setPointSize(15)
+            newUserLabel.setFont(font)
+            newUserLabel.setObjectName(user)
+            newUserLabel.setText(user)
+
+            self.joinedUsersLabelList.append(newUserLabel)
+
+            newUserLabel.setFixedSize(200, 50)
+
+            # Make it clickable by passing it through a custom clickable class
+            clickable(newUserLabel).connect(self.onSingleUserLabelClick)
+
+            self.connectedDialog.ui.clientsListLayout.addWidget(newUserLabel)
+
+    def clearLayout(self, layoutToClear):
+        self.joinedUsersLabelList = []
+        self.selectedSingleChatLabel = None
+
+        for i in reversed(range(layoutToClear.count())):
+            layoutToClear.itemAt(i).widget().deleteLater()
+
+
+# Source https://wiki.python.org/moin/PyQt/Making%20non-clickable%20widgets%20clickable
+# Allows for labels to emit on click events
+def clickable(widget):
+
+    class Filter(QObject):
+        clicked = pyqtSignal(object)
+
+        def eventFilter(self, obj, event):
+            if obj == widget:
+                if event.type() == QEvent.MouseButtonRelease:
+                    if obj.rect().contains(event.pos()):
+                        self.clicked.emit(obj)
+                        return True
+                return False
+
+    filter = Filter(widget)
+    widget.installEventFilter(filter)
+    return filter.clicked
+
 
 class ConnectionGUIWindow:
     def __init__(self, mainInstance):
         self.mainInstance = mainInstance
+        self.connectedGUIWindow = None
 
         # Instantiate main connection window
         app = QApplication(sys.argv)
@@ -70,6 +164,8 @@ class ConnectionGUIWindow:
         # Add on connect button click
         self.mainWindowUI.connectButton.clicked.connect(
             self.onConnectButtonClick)
+
+        mainInstance.mainGuiWindow = self
 
         # Show it
         connectionWindow.show()
@@ -90,7 +186,8 @@ class ConnectionGUIWindow:
         self.mainInstance.createNewClient(ip, port, clientName)
 
         # Instantiate new connected user chat window
-        self.connectedGUIWindow = ConnectedGUIWindow(self.mainInstance)
+        self.connectedGUIWindow = None
+        ConnectedGUIWindow(self.mainInstance, self)
 
 
 class main():
@@ -102,12 +199,22 @@ class main():
         self.clientInstance = None
 
         # Instantiate new initial connection window
-        self.mainGuiWindow = ConnectionGUIWindow(self)
+        self.mainGuiWindow = None
+        ConnectionGUIWindow(self)
 
     def createNewClient(self, ip, port, clientName):
         # Instantiate Client
         self.clientInstance = Client(ip, port, clientName)
         self.clientInstance.start()
+
+        self.receivedMessagesThread = Receive(self.clientInstance)
+        self.receivedMessagesThread.newConnectedUsersList.connect(
+            self.updateUserLabels)
+
+        self.receivedMessagesThread.start()
+
+    def updateUserLabels(self, newUserList):
+        self.mainGuiWindow.connectedGUIWindow.updateUserLabels(newUserList)
 
 
 if __name__ == "__main__":
