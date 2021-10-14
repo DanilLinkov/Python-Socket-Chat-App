@@ -22,6 +22,7 @@ from ActionEnum import ActionType
 class Receive(QThread):
     newConnectedUsersList = pyqtSignal(object)
     newSingleMessage = pyqtSignal(object, object)
+    newGroupsList = pyqtSignal(object)
 
     def __init__(self, clientInstance):
         QThread.__init__(self)
@@ -48,6 +49,9 @@ class Receive(QThread):
                         elif messageType == ActionType.receiveMessage:
                             self.newSingleMessage.emit(
                                 serverMessage[1], serverMessage[2])
+                        elif messageType == ActionType.createRoom:
+                            self.newGroupsList.emit(serverMessage[1])
+
                     else:
                         print("Connection shut down.")
                         break
@@ -130,6 +134,9 @@ class ConnectedGUIWindow:
         self.connectedDialog.ui.oneOnOneChatButton.clicked.connect(
             self.onSingleChatOpen)
 
+        self.connectedDialog.ui.createButton.clicked.connect(
+            self.onCreateGroupButton)
+
         parent.connectedGUIWindow = self
 
         self.singleChatGUIWindow = None
@@ -137,7 +144,49 @@ class ConnectedGUIWindow:
         self.selectedSingleChatLabel = None
         self.joinedUsersLabelList = []
 
+        self.selectedGroupChatLabel = None
+        self.groupsLabelList = []
+
         self.connectedDialog.exec_()
+
+    def onCreateGroupButton(self):
+        # Send a message to Server that a new room was made
+        self.mainInstance.clientInstance.sendMessageToServer(
+            (ActionType.createRoom, "test"))
+
+    def updateGroupLabels(self, newGroupsList):
+        self.clearLayout(self.connectedDialog.ui.chatRoomsListLayout)
+
+        self.groupsLabelList = []
+        self.selectedGroupChatLabel = None
+
+        self.connectedDialog.ui.chatRoomsListLayout.setAlignment(
+            Qt.AlignTop)
+
+        for group in newGroupsList:
+            newGroupLabel = QLabel()
+            font = QFont()
+            font.setPointSize(15)
+            newGroupLabel.setFont(font)
+            newGroupLabel.setObjectName(group)
+            newGroupLabel.setText(group)
+
+            self.groupsLabelList.append(newGroupLabel)
+
+            newGroupLabel.setFixedSize(200, 50)
+
+            # Make it clickable by passing it through a custom clickable class
+            clickable(newGroupLabel).connect(self.onSingleGroupClick)
+
+            self.connectedDialog.ui.chatRoomsListLayout.addWidget(
+                newGroupLabel)
+
+    def onSingleGroupClick(self, label):
+        for l in self.groupsLabelList:
+            l.setStyleSheet("background-color: white")
+
+        label.setStyleSheet("background-color: grey")
+        self.selectedGroupChatLabel = label
 
     def onSingleChatOpen(self):
         if self.selectedSingleChatLabel is not None:
@@ -153,6 +202,8 @@ class ConnectedGUIWindow:
 
     def updateUserLabels(self, newUserList):
         self.clearLayout(self.connectedDialog.ui.clientsListLayout)
+        self.joinedUsersLabelList = []
+        self.selectedSingleChatLabel = None
 
         self.connectedDialog.ui.clientsListLayout.setAlignment(
             Qt.AlignTop)
@@ -175,9 +226,6 @@ class ConnectedGUIWindow:
             self.connectedDialog.ui.clientsListLayout.addWidget(newUserLabel)
 
     def clearLayout(self, layoutToClear):
-        self.joinedUsersLabelList = []
-        self.selectedSingleChatLabel = None
-
         for i in reversed(range(layoutToClear.count())):
             layoutToClear.itemAt(i).widget().deleteLater()
 
@@ -264,6 +312,8 @@ class main():
             self.updateUserLabels)
         self.receivedMessagesThread.newSingleMessage.connect(
             self.gotSingleMessage)
+        self.receivedMessagesThread.newGroupsList.connect(
+            self.updateGroupLabels)
 
         self.receivedMessagesThread.start()
 
@@ -278,6 +328,9 @@ class main():
         else:
             self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow.appendMessageLabel(
                 userFrom, message)
+
+    def updateGroupLabels(self, newGroupsList):
+        self.mainGuiWindow.connectedGUIWindow.updateGroupLabels(newGroupsList)
 
 
 if __name__ == "__main__":

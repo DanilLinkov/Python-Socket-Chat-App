@@ -14,8 +14,10 @@ from Utils import *
 class Server(threading.Thread):
     def __init__(self, host, port):
         super().__init__()
-        self.numOfClients = 0
         self.clientsList = []
+
+        self.groups = []
+
         self.host = host
         self.port = port
 
@@ -61,6 +63,8 @@ class Server(threading.Thread):
 
                     # Broadcast to all the other users that a new client joined
                     self.updateConnectedClientsList()
+                    self.sendMessageToAllClients(
+                        (ActionType.createRoom, self.getListOfGroupsNames()))
 
     def removeClientFromClientsList(self, clientSocketToRemove):
         self.clientsList.remove(clientSocketToRemove)
@@ -89,6 +93,21 @@ class Server(threading.Thread):
             if client.clientName == clientTo:
                 client.sendMessageToClient(messageAsTuple)
 
+    def getListOfGroupsNames(self):
+        groupNames = []
+
+        for i, group in enumerate(self.groups):
+            groupNames.append(
+                "Room "+str(i)+" by "+group[0].clientName)
+
+        return groupNames
+
+    def createNewRoom(self, owner):
+        self.groups.append((owner, [owner]))
+
+        self.sendMessageToAllClients(
+            (ActionType.createRoom, self.getListOfGroupsNames()))
+
 
 class ServerSocket(threading.Thread):
     def __init__(self, client, address, clientName, serverInstance):
@@ -113,6 +132,11 @@ class ServerSocket(threading.Thread):
 
                     self.serverInstance.sendMessageToSingleClient(
                         toUser, (ActionType.receiveMessage, self.clientName+":"+str(self.serverInstance.clientsList.index(self)), actualMessage))
+
+                elif messageType == ActionType.createRoom:
+                    # Create the room and let everyone know a room has been made
+                    self.serverInstance.createNewRoom(self)
+
             else:
                 print(f'Client: {self.clientName} has disconected.')
                 self.serverInstance.removeClientFromClientsList(self)
