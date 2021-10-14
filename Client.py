@@ -77,7 +77,7 @@ class Client:
 
 
 class SingleChatGUIWindow:
-    def __init__(self, mainInstance, parent, toUserName):
+    def __init__(self, mainInstance, parent, toUserName, newMessage=None):
         self.mainInstance = mainInstance
         self.toUserName = toUserName
 
@@ -91,11 +91,31 @@ class SingleChatGUIWindow:
         self.oneOnOneDialog.ui.sendButton.clicked.connect(
             self.onSendMessageButtonClick)
 
+        if newMessage is not None:
+            self.appendMessageLabel(newMessage[0], newMessage[1])
+
         self.oneOnOneDialog.exec_()
 
     def onSendMessageButtonClick(self):
         self.mainInstance.clientInstance.sendMessageToServer(
             (ActionType.sendMessage, self.toUserName, self.oneOnOneDialog.ui.oneOnOneMessageEdit.text()))
+
+        self.appendMessageLabel(self.mainInstance.clientInstance.clientName,
+                                self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
+
+    def appendMessageLabel(self, userName, message):
+        self.oneOnOneDialog.ui.messagesScrollLayout.setAlignment(Qt.AlignTop)
+
+        newMessageLabel = QLabel()
+        font = QFont()
+        font.setPointSize(15)
+        newMessageLabel.setFont(font)
+        newMessageLabel.setObjectName(userName)
+        newMessageLabel.setText(userName.split(":")[0]+" => "+message)
+
+        newMessageLabel.setFixedSize(200, 50)
+
+        self.oneOnOneDialog.ui.messagesScrollLayout.addWidget(newMessageLabel)
 
 
 class ConnectedGUIWindow:
@@ -254,10 +274,10 @@ class main():
         # Create new Single chat popup and update messages
         if self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow is None:
             SingleChatGUIWindow(
-                self, self.mainGuiWindow.connectedGUIWindow, userFrom)
-            print(message+" <===")
+                self, self.mainGuiWindow.connectedGUIWindow, userFrom, (userFrom, message))
         else:
-            print("Single message instance already exists!")
+            self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow.appendMessageLabel(
+                userFrom, message)
 
 
 if __name__ == "__main__":
