@@ -19,6 +19,29 @@ from Utils import *
 from ActionEnum import ActionType
 
 
+class Client:
+    def __init__(self, host, port, clientName):
+        self.host = host
+        self.port = port
+        self.clientName = clientName
+
+        self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def start(self):
+        print(f'Attempting to connect to {self.host}:{self.port}...')
+
+        # Connect to the socket given the host address and port
+        self.clientSocket.connect((self.host, self.port))
+
+        # Send the server the client's name
+        send(self.clientSocket, self.clientName)
+
+        print(f'Connected to {self.host}:{self.port} as {self.clientName}.')
+
+    def sendMessageToServer(self, messageAsTuple):
+        send(self.clientSocket, messageAsTuple)
+
+
 class ConnectedGUIWindow:
     def __init__(self, mainInstance):
         self.mainInstance = mainInstance
@@ -74,14 +97,17 @@ class main():
 
     def __init__(self):
         self.receivedMessagesThread = None
-        self.oneOnOneChatSelected = None
         self.connectedUserLabelList = []
+
+        self.clientInstance = None
 
         # Instantiate new initial connection window
         self.mainGuiWindow = ConnectionGUIWindow(self)
 
     def createNewClient(self, ip, port, clientName):
-        pass
+        # Instantiate Client
+        self.clientInstance = Client(ip, port, clientName)
+        self.clientInstance.start()
 
 
 if __name__ == "__main__":

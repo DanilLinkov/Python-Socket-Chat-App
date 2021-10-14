@@ -45,11 +45,11 @@ class Server(threading.Thread):
                     # Accept connection from user
                     client, address = self.server.accept()
 
-                    print(
-                        f'New user connection: {client.fileno()} from {address}')
-
                     # Receive name from client
                     clientName = receive(client)
+
+                    print(
+                        f'New user connection: Name: {clientName}, {client.fileno()} from {address}')
 
                     # Create new Server socket
                     newServerSocket = ServerSocket(
