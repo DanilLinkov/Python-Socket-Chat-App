@@ -51,6 +51,10 @@ class Receive(QThread):
                                 serverMessage[1], serverMessage[2])
                         elif messageType == ActionType.createRoom:
                             self.newGroupsList.emit(serverMessage[1])
+                        elif messageType == ActionType.groupUsersListUpdate:
+                            print(serverMessage[1])
+                        elif messageType == ActionType.receiveGroup:
+                            pass
 
                     else:
                         print("Connection shut down.")
@@ -122,6 +126,42 @@ class SingleChatGUIWindow:
         self.oneOnOneDialog.ui.messagesScrollLayout.addWidget(newMessageLabel)
 
 
+class GroupChatGUIWindow:
+    def __init__(self, mainInstance, parent, groupName):
+        self.mainInstance = mainInstance
+        self.groupName = groupName
+
+        parent.groupChatGUIWindow = self
+
+        self.groupChatDialog = QDialog()
+        self.groupChatDialog.ui = groupDialog()
+        self.groupChatDialog.ui.setupUi(self.groupChatDialog)
+        self.groupChatDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.groupChatDialog.ui.sendButton_2.clicked.connect(
+            self.onSendGroupMessageButtonClick)
+
+        self.groupChatDialog.exec_()
+
+    def updateUsersInGroupLabels(self, newUserList):
+        pass
+
+    def onSendGroupMessageButtonClick(self):
+        pass
+        # self.mainInstance.clientInstance.sendMessageToServer(
+        #     (ActionType.sendMessage, self.toUserName, self.oneOnOneDialog.ui.oneOnOneMessageEdit.text()))
+
+        # self.appendMessageLabel(self.mainInstance.clientInstance.clientName,
+        #                         self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
+
+    def appendMessageLabel(self):
+        pass
+
+    def clearLayout(self, layoutToClear):
+        for i in reversed(range(layoutToClear.count())):
+            layoutToClear.itemAt(i).widget().deleteLater()
+
+
 class ConnectedGUIWindow:
     def __init__(self, mainInstance, parent):
         self.mainInstance = mainInstance
@@ -137,6 +177,9 @@ class ConnectedGUIWindow:
         self.connectedDialog.ui.createButton.clicked.connect(
             self.onCreateGroupButton)
 
+        self.connectedDialog.ui.joinButton.clicked.connect(
+            self.onJoinClick)
+
         parent.connectedGUIWindow = self
 
         self.singleChatGUIWindow = None
@@ -144,10 +187,21 @@ class ConnectedGUIWindow:
         self.selectedSingleChatLabel = None
         self.joinedUsersLabelList = []
 
+        self.groupChatGUIWindow = None
+
         self.selectedGroupChatLabel = None
         self.groupsLabelList = []
 
         self.connectedDialog.exec_()
+
+    def onJoinClick(self):
+        if self.selectedGroupChatLabel is not None:
+            # Send user joined group message to server
+            self.mainInstance.clientInstance.sendMessageToServer(
+                (ActionType.groupUserJoined, self.selectedGroupChatLabel.text()))
+
+            GroupChatGUIWindow(self.mainInstance, self,
+                               self.selectedGroupChatLabel.text())
 
     def onCreateGroupButton(self):
         # Send a message to Server that a new room was made

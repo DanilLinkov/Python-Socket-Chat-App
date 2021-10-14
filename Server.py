@@ -103,10 +103,29 @@ class Server(threading.Thread):
         return groupNames
 
     def createNewRoom(self, owner):
-        self.groups.append((owner, [owner]))
+        self.groups.append((owner, []))
 
         self.sendMessageToAllClients(
             (ActionType.createRoom, self.getListOfGroupsNames()))
+
+    def getUserNamesListInGroup(self, group):
+        names = []
+
+        for i, client in enumerate(group[1]):
+            names.append(client.clientName+":"+str(i))
+
+        return names
+
+    def addUserToGroup(self, newUser, groupToJoin):
+        for i, group in enumerate(self.groups):
+            if groupToJoin == "Room "+str(i)+" by "+group[0].clientName:
+                group[1].append(newUser)
+                self.sendMessageToGroup(
+                    group, (ActionType.groupUsersListUpdate, self.getUserNamesListInGroup(group)))
+
+    def sendMessageToGroup(self, group, messageAsTuple):
+        for i, client in enumerate(group[1]):
+            client.sendMessageToClient(messageAsTuple)
 
 
 class ServerSocket(threading.Thread):
@@ -136,6 +155,11 @@ class ServerSocket(threading.Thread):
                 elif messageType == ActionType.createRoom:
                     # Create the room and let everyone know a room has been made
                     self.serverInstance.createNewRoom(self)
+
+                elif messageType == ActionType.groupUserJoined:
+                    # Add user to group and let everyone know a new user has joined the group
+                    self.serverInstance.addUserToGroup(
+                        self, messageFromClient[1])
 
             else:
                 print(f'Client: {self.clientName} has disconected.')
