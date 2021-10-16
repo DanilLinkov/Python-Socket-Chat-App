@@ -55,7 +55,7 @@ class Server(threading.Thread):
 
                     # Create new Server socket
                     newServerSocket = ServerSocket(
-                        client, address, clientName, self)
+                        client, address, clientName + ":" + str(client.fileno()), self)
                     newServerSocket.start()
 
                     # Add it to the clients list
@@ -78,8 +78,7 @@ class Server(threading.Thread):
         names = []
 
         for client in self.clientsList:
-            names.append(client.clientName+":" +
-                         str(self.clientsList.index(client)))
+            names.append(client.clientName)
 
         return names
 
@@ -89,7 +88,6 @@ class Server(threading.Thread):
 
     def sendMessageToSingleClient(self, clientTo, messageAsTuple):
         for client in self.clientsList:
-            print(client.clientName)
             if client.clientName == clientTo:
                 client.sendMessageToClient(messageAsTuple)
 
@@ -112,7 +110,7 @@ class Server(threading.Thread):
         names = []
 
         for i, client in enumerate(group[1]):
-            names.append(client.clientName+":"+str(i))
+            names.append(client.clientName)
 
         return names
 
@@ -153,11 +151,11 @@ class ServerSocket(threading.Thread):
 
                 if messageType == ActionType.sendMessage:
                     # Send message to the userTo
-                    toUser = messageFromClient[1].split(":")[0]
+                    toUser = messageFromClient[1]
                     actualMessage = messageFromClient[2]
 
                     self.serverInstance.sendMessageToSingleClient(
-                        toUser, (ActionType.receiveMessage, self.clientName+":"+str(self.serverInstance.clientsList.index(self)), actualMessage))
+                        toUser, (ActionType.receiveMessage, self.clientName, actualMessage))
 
                 elif messageType == ActionType.createRoom:
                     # Create the room and let everyone know a room has been made
@@ -177,11 +175,11 @@ class ServerSocket(threading.Thread):
                         group, (ActionType.receiveGroup, self.clientName, actualMessage))
 
                 elif messageType == ActionType.invite:
-                    toUser = messageFromClient[1].split(":")[0]
+                    toUser = messageFromClient[1]
                     toGroup = messageFromClient[2]
 
                     self.serverInstance.sendMessageToSingleClient(
-                        toUser, (ActionType.invite, self.clientName+":"+str(self.serverInstance.clientsList.index(self)), toGroup))
+                        toUser, (ActionType.invite, self.clientName, toGroup))
 
             else:
                 print(f'Client: {self.clientName} has disconected.')
