@@ -176,6 +176,13 @@ class ServerSocket(threading.Thread):
                     self.serverInstance.sendMessageToGroup(
                         group, (ActionType.receiveGroup, self.clientName, actualMessage))
 
+                elif messageType == ActionType.invite:
+                    toUser = messageFromClient[1].split(":")[0]
+                    toGroup = messageFromClient[2]
+
+                    self.serverInstance.sendMessageToSingleClient(
+                        toUser, (ActionType.invite, self.clientName+":"+str(self.serverInstance.clientsList.index(self)), toGroup))
+
             else:
                 print(f'Client: {self.clientName} has disconected.')
                 self.serverInstance.removeClientFromClientsList(self)

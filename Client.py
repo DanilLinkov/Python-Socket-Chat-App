@@ -25,6 +25,7 @@ class Receive(QThread):
     newGroupsList = pyqtSignal(object)
     newUserListInGroup = pyqtSignal(object)
     newGroupMessage = pyqtSignal(object, object)
+    newInviteToGroup = pyqtSignal(object, object)
 
     def __init__(self, clientInstance):
         QThread.__init__(self)
@@ -58,6 +59,10 @@ class Receive(QThread):
                         elif messageType == ActionType.receiveGroup:
                             self.newGroupMessage.emit(
                                 serverMessage[1], serverMessage[2])
+                        elif messageType == ActionType.invite:
+                            print(serverMessage[1] + " , " + serverMessage[2])
+                            # self.newInviteToGroup.emit(
+                            #     serverMessage[1], serverMessage[2])
 
                     else:
                         print("Connection shut down.")
@@ -99,6 +104,9 @@ class InviteUserGUIWindow:
         self.inviteChatDialog.ui.setupUi(self.inviteChatDialog)
         self.inviteChatDialog.setAttribute(Qt.WA_DeleteOnClose)
 
+        self.inviteChatDialog.ui.inviteButton.clicked.connect(
+            self.onInviteUserClick)
+
         self.selectedUserToInviteLabel = None
         self.usersNotInTheGroupLabelList = []
 
@@ -112,7 +120,8 @@ class InviteUserGUIWindow:
 
     def onInviteUserClick(self):
         # Make client send message to server to invite toUser, groupName
-        pass
+        self.mainInstance.clientInstance.sendMessageToServer(
+            (ActionType.invite, self.selectedUserToInviteLabel.text(), self.parent.groupName))
 
     def onSingleUserLabelClick(self, label):
         for l in self.usersNotInTheGroupLabelList:
