@@ -67,8 +67,19 @@ class Server(threading.Thread):
                         (ActionType.createRoom, self.getListOfGroupsNames()))
 
     def removeClientFromClientsList(self, clientSocketToRemove):
+        # Remove them from any group
+        self.removeClientFromGroups(clientSocketToRemove)
         self.clientsList.remove(clientSocketToRemove)
         self.updateConnectedClientsList()
+
+    def removeClientFromGroups(self, clientSocketToRemove):
+        for i, group in enumerate(self.groups):
+            if clientSocketToRemove in group[1]:
+                print(clientSocketToRemove.clientName + " has left group " +
+                      "Room "+str(i)+" by "+group[0].clientName)
+                group[1].remove(clientSocketToRemove)
+                self.sendMessageToGroup(
+                    group, (ActionType.groupUsersListUpdate, self.getUserNamesListInGroup(group)))
 
     def updateConnectedClientsList(self):
         self.sendMessageToAllClients(
@@ -181,9 +192,16 @@ class ServerSocket(threading.Thread):
                     self.serverInstance.sendMessageToSingleClient(
                         toUser, (ActionType.invite, self.clientName, toGroup))
 
+                elif messageType == ActionType.userQuitServer:
+                    print(f'Client: {self.clientName} has disconected.')
+                    self.serverInstance.removeClientFromClientsList(self)
+
+                elif messageType == ActionType.userQuitGroup:
+                    self.serverInstance.removeClientFromGroups(self)
+
             else:
-                print(f'Client: {self.clientName} has disconected.')
-                self.serverInstance.removeClientFromClientsList(self)
+                print(f'Client: {self.clientName} has closed the connection.')
+                self.serverInstance.removeClientFromGroups(self)
 
     def sendMessageToClient(self, messageAsTuple):
         send(self.client, messageAsTuple)

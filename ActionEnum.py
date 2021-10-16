@@ -13,3 +13,5 @@ class ActionType(enum.Enum):
     invite = 9
     groupUserJoined = 10
     createRoom = 11
+    userQuitServer = 12
+    userQuitGroup = 13

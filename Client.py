@@ -140,6 +140,9 @@ class InviteUserGUIWindow:
         self.inviteChatDialog.ui.inviteButton.clicked.connect(
             self.onInviteUserClick)
 
+        self.inviteChatDialog.ui.closeButton.clicked.connect(
+            self.closeAllWindowsFromThis)
+
         self.selectedUserToInviteLabel = None
         self.usersNotInTheGroupLabelList = []
 
@@ -224,6 +227,9 @@ class GroupChatGUIWindow:
         self.groupChatDialog.ui.sendButton_3.clicked.connect(
             self.onInviteClick)
 
+        self.groupChatDialog.ui.closeButton_2.clicked.connect(
+            self.closeAllWindowsFromThis)
+
         self.groupChatDialog.exec_()
 
     def closeAllWindowsFromThis(self):
@@ -233,6 +239,8 @@ class GroupChatGUIWindow:
             self.inviteUserGUIWindow = None
 
         self.groupChatDialog.close()
+        self.mainInstance.clientInstance.sendMessageToServer((
+            ActionType.userQuitGroup, "test"))
 
     def onInviteClick(self):
         # Create Invite dialog
@@ -301,13 +309,19 @@ class SingleChatGUIWindow:
         self.oneOnOneDialog.ui.sendButton.clicked.connect(
             self.onSendMessageButtonClick)
 
+        self.oneOnOneDialog.ui.closeButton.clicked.connect(
+            self.onCloseClick)
+
         if newMessage is not None:
             self.appendMessageLabel(newMessage[0], newMessage[1])
 
         self.oneOnOneDialog.exec_()
 
-    def closeAllWindowsFromThis(self):
+    def onCloseClick(self):
         self.oneOnOneDialog.close()
+
+    def closeAllWindowsFromThis(self):
+        self.onCloseClick()
 
     def onSendMessageButtonClick(self):
         self.mainInstance.clientInstance.sendMessageToServer(
@@ -334,6 +348,7 @@ class SingleChatGUIWindow:
 class ConnectedGUIWindow:
     def __init__(self, mainInstance, parent):
         self.mainInstance = mainInstance
+        self.parent = parent
 
         self.connectedDialog = QDialog()
         self.connectedDialog.ui = connectedDialog()
@@ -348,6 +363,9 @@ class ConnectedGUIWindow:
 
         self.connectedDialog.ui.joinButton.clicked.connect(
             self.onJoinClick)
+
+        self.connectedDialog.ui.closeButton.clicked.connect(
+            self.onCloseClick)
 
         parent.connectedGUIWindow = self
 
@@ -366,6 +384,10 @@ class ConnectedGUIWindow:
         self.groupInviteGUIWindow = None
 
         self.connectedDialog.exec_()
+
+    def onCloseClick(self):
+        self.connectedDialog.close()
+        self.parent.connectedGUIWindow = None
 
     def joinGroupFromInvite(self, toGroup):
         # close all the other popups and make them join the group
@@ -397,6 +419,7 @@ class ConnectedGUIWindow:
     def onJoinClick(self):
         if self.selectedGroupChatLabel is not None:
             # Send user joined group message to server
+            print("added user again")
             self.mainInstance.clientInstance.sendMessageToServer(
                 (ActionType.groupUserJoined, self.selectedGroupChatLabel.text()))
 
@@ -520,21 +543,27 @@ class ConnectionGUIWindow:
 
         # Instantiate main connection window
         app = QApplication(sys.argv)
-        connectionWindow = QMainWindow()
+        self.connectionWindow = QMainWindow()
         self.mainWindowUI = Ui_ConnectionWindow()
-        self.mainWindowUI.setupUi(connectionWindow)
+        self.mainWindowUI.setupUi(self.connectionWindow)
 
         # Add on connect button click
         self.mainWindowUI.connectButton.clicked.connect(
             self.onConnectButtonClick)
 
+        self.mainWindowUI.cancelButton.clicked.connect(
+            self.onCancelClick)
+
         mainInstance.mainGuiWindow = self
 
         # Show it
-        connectionWindow.show()
+        self.connectionWindow.show()
 
         # Keeps it open until closed
         sys.exit(app.exec_())
+
+    def onCancelClick(self):
+        self.connectionWindow.close()
 
     def onConnectButtonClick(self):
         # Get the ip, port and client name
