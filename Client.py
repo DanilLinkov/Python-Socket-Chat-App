@@ -87,52 +87,79 @@ class Client:
         send(self.clientSocket, messageAsTuple)
 
 
-class SingleChatGUIWindow:
-    def __init__(self, mainInstance, parent, toUserName, newMessage=None):
+class InviteUserGUIWindow:
+    def __init__(self, mainInstance, parent):
         self.mainInstance = mainInstance
-        self.toUserName = toUserName
+        self.parent = parent
 
-        parent.singleChatGUIWindow = self
+        parent.inviteUserGUIWindow = self
 
-        self.oneOnOneDialog = QDialog()
-        self.oneOnOneDialog.ui = oneOnOneDialog()
-        self.oneOnOneDialog.ui.setupUi(self.oneOnOneDialog)
-        self.oneOnOneDialog.setAttribute(Qt.WA_DeleteOnClose)
+        self.inviteChatDialog = QDialog()
+        self.inviteChatDialog.ui = inviteDialog()
+        self.inviteChatDialog.ui.setupUi(self.inviteChatDialog)
+        self.inviteChatDialog.setAttribute(Qt.WA_DeleteOnClose)
 
-        self.oneOnOneDialog.ui.sendButton.clicked.connect(
-            self.onSendMessageButtonClick)
+        self.selectedUserToInviteLabel = None
+        self.usersNotInTheGroupLabelList = []
 
-        if newMessage is not None:
-            self.appendMessageLabel(newMessage[0], newMessage[1])
+        print(self.parent.usersInGroup)
+        print(self.parent.parent.connectedUsersList)
 
-        self.oneOnOneDialog.exec_()
+        self.updateUserLabels([
+            x for x in self.parent.parent.connectedUsersList if x not in self.parent.usersInGroup])
 
-    def onSendMessageButtonClick(self):
-        self.mainInstance.clientInstance.sendMessageToServer(
-            (ActionType.sendMessage, self.toUserName, self.oneOnOneDialog.ui.oneOnOneMessageEdit.text()))
+        self.inviteChatDialog.exec_()
 
-        self.appendMessageLabel(self.mainInstance.clientInstance.clientName,
-                                self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
+    def onInviteUserClick(self):
+        # Make client send message to server to invite toUser, groupName
+        pass
 
-    def appendMessageLabel(self, userName, message):
-        self.oneOnOneDialog.ui.messagesScrollLayout.setAlignment(Qt.AlignTop)
+    def onSingleUserLabelClick(self, label):
+        for l in self.usersNotInTheGroupLabelList:
+            l.setStyleSheet("background-color: white")
 
-        newMessageLabel = QLabel()
-        font = QFont()
-        font.setPointSize(15)
-        newMessageLabel.setFont(font)
-        newMessageLabel.setObjectName(userName)
-        newMessageLabel.setText(userName.split(":")[0]+" => "+message)
+        label.setStyleSheet("background-color: grey")
+        self.selectedUserToInviteLabel = label
 
-        newMessageLabel.setFixedSize(200, 50)
+    def updateUserLabels(self, newUserList):
+        # Minus users in the group from the newUserList
+        print(newUserList)
 
-        self.oneOnOneDialog.ui.messagesScrollLayout.addWidget(newMessageLabel)
+        self.clearLayout(self.inviteChatDialog.ui.inviteListLayout)
+        self.usersNotInTheGroupLabelList = []
+        self.selectedUserToInviteLabel = None
+
+        self.inviteChatDialog.ui.inviteListLayout.setAlignment(
+            Qt.AlignTop)
+
+        for user in newUserList:
+            newUserLabel = QLabel()
+            font = QFont()
+            font.setPointSize(15)
+            newUserLabel.setFont(font)
+            newUserLabel.setObjectName(user)
+            newUserLabel.setText(user)
+
+            self.usersNotInTheGroupLabelList.append(newUserLabel)
+
+            newUserLabel.setFixedSize(200, 50)
+
+            # Make it clickable by passing it through a custom clickable class
+            clickable(newUserLabel).connect(self.onSingleUserLabelClick)
+
+            self.inviteChatDialog.ui.inviteListLayout.addWidget(newUserLabel)
+
+    def clearLayout(self, layoutToClear):
+        for i in reversed(range(layoutToClear.count())):
+            layoutToClear.itemAt(i).widget().deleteLater()
 
 
 class GroupChatGUIWindow:
     def __init__(self, mainInstance, parent, groupName):
         self.mainInstance = mainInstance
         self.groupName = groupName
+
+        self.parent = parent
 
         parent.groupChatGUIWindow = self
 
@@ -141,14 +168,28 @@ class GroupChatGUIWindow:
         self.groupChatDialog.ui.setupUi(self.groupChatDialog)
         self.groupChatDialog.setAttribute(Qt.WA_DeleteOnClose)
 
+        self.usersInGroupLabelList = []
+        self.usersInGroup = []
+
+        self.inviteUserGUIWindow = None
+
         self.groupChatDialog.ui.sendButton_2.clicked.connect(
             self.onSendGroupMessageButtonClick)
 
+        self.groupChatDialog.ui.sendButton_3.clicked.connect(
+            self.onInviteClick)
+
         self.groupChatDialog.exec_()
+
+    def onInviteClick(self):
+        # Create Invite dialog
+        self.inviteUserGUIWindow = None
+        InviteUserGUIWindow(self.mainInstance, self)
 
     def updateUsersInGroupLabels(self, newUserList):
         self.clearLayout(self.groupChatDialog.ui.membersListLayout)
         self.usersInGroupLabelList = []
+        self.usersInGroup = newUserList
 
         self.groupChatDialog.ui.membersListLayout.setAlignment(
             Qt.AlignTop)
@@ -195,6 +236,48 @@ class GroupChatGUIWindow:
             layoutToClear.itemAt(i).widget().deleteLater()
 
 
+class SingleChatGUIWindow:
+    def __init__(self, mainInstance, parent, toUserName, newMessage=None):
+        self.mainInstance = mainInstance
+        self.toUserName = toUserName
+
+        parent.singleChatGUIWindow = self
+
+        self.oneOnOneDialog = QDialog()
+        self.oneOnOneDialog.ui = oneOnOneDialog()
+        self.oneOnOneDialog.ui.setupUi(self.oneOnOneDialog)
+        self.oneOnOneDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.oneOnOneDialog.ui.sendButton.clicked.connect(
+            self.onSendMessageButtonClick)
+
+        if newMessage is not None:
+            self.appendMessageLabel(newMessage[0], newMessage[1])
+
+        self.oneOnOneDialog.exec_()
+
+    def onSendMessageButtonClick(self):
+        self.mainInstance.clientInstance.sendMessageToServer(
+            (ActionType.sendMessage, self.toUserName, self.oneOnOneDialog.ui.oneOnOneMessageEdit.text()))
+
+        self.appendMessageLabel(self.mainInstance.clientInstance.clientName,
+                                self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
+
+    def appendMessageLabel(self, userName, message):
+        self.oneOnOneDialog.ui.messagesScrollLayout.setAlignment(Qt.AlignTop)
+
+        newMessageLabel = QLabel()
+        font = QFont()
+        font.setPointSize(15)
+        newMessageLabel.setFont(font)
+        newMessageLabel.setObjectName(userName)
+        newMessageLabel.setText(userName.split(":")[0]+" => "+message)
+
+        newMessageLabel.setFixedSize(200, 50)
+
+        self.oneOnOneDialog.ui.messagesScrollLayout.addWidget(newMessageLabel)
+
+
 class ConnectedGUIWindow:
     def __init__(self, mainInstance, parent):
         self.mainInstance = mainInstance
@@ -224,6 +307,8 @@ class ConnectedGUIWindow:
 
         self.selectedGroupChatLabel = None
         self.groupsLabelList = []
+
+        self.connectedUsersList = []
 
         self.connectedDialog.exec_()
 
@@ -288,8 +373,17 @@ class ConnectedGUIWindow:
         self.selectedSingleChatLabel = label
 
     def updateUserLabels(self, newUserList):
+        # Check if in group chat and if invite window open
+        if self.groupChatGUIWindow is not None and self.groupChatGUIWindow.inviteUserGUIWindow is not None:
+            # update the invite list labels
+            notInGroupUserList = [
+                x for x in newUserList if x not in self.groupChatGUIWindow.usersInGroup]
+            self.groupChatGUIWindow.inviteUserGUIWindow.updateUserLabels(
+                notInGroupUserList)
+
         self.clearLayout(self.connectedDialog.ui.clientsListLayout)
         self.joinedUsersLabelList = []
+        self.connectedUsersList = newUserList
         self.selectedSingleChatLabel = None
 
         self.connectedDialog.ui.clientsListLayout.setAlignment(
