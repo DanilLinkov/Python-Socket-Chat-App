@@ -238,7 +238,11 @@ class GroupChatGUIWindow:
             self.inviteUserGUIWindow.closeAllWindowsFromThis()
             self.inviteUserGUIWindow = None
 
-        self.groupChatDialog.close()
+        try:
+            self.groupChatDialog.close()
+        except:
+            print("Window already closed!")
+
         self.mainInstance.clientInstance.sendMessageToServer((
             ActionType.userQuitGroup, "test"))
 
