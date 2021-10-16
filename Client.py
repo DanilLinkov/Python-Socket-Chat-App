@@ -105,6 +105,9 @@ class groupInvitePopup:
         self.groupInviteDialog.ui.setupUi(self.groupInviteDialog)
         self.groupInviteDialog.setAttribute(Qt.WA_DeleteOnClose)
 
+        self.groupInviteDialog.setWindowFlag(
+            Qt.WindowCloseButtonHint, False)
+
         self.groupInviteDialog.ui.label.setText(
             f"You have an invite from {fromUser}\n To group {toGroup}\n Accept to join or decline to close this popup.")
 
@@ -136,6 +139,9 @@ class InviteUserGUIWindow:
         self.inviteChatDialog.ui = inviteDialog()
         self.inviteChatDialog.ui.setupUi(self.inviteChatDialog)
         self.inviteChatDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.inviteChatDialog.setWindowFlag(
+            Qt.WindowCloseButtonHint, False)
 
         self.inviteChatDialog.ui.inviteButton.clicked.connect(
             self.onInviteUserClick)
@@ -215,6 +221,9 @@ class GroupChatGUIWindow:
         self.groupChatDialog.ui = groupDialog()
         self.groupChatDialog.ui.setupUi(self.groupChatDialog)
         self.groupChatDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.groupChatDialog.setWindowFlag(
+            Qt.WindowCloseButtonHint, False)
 
         self.usersInGroupLabelList = []
         self.usersInGroup = []
@@ -318,6 +327,9 @@ class SingleChatGUIWindow:
         self.oneOnOneDialog.ui.setupUi(self.oneOnOneDialog)
         self.oneOnOneDialog.setAttribute(Qt.WA_DeleteOnClose)
 
+        self.oneOnOneDialog.setWindowFlag(
+            Qt.WindowCloseButtonHint, False)
+
         self.oneOnOneDialog.ui.sendButton.clicked.connect(
             self.onSendMessageButtonClick)
 
@@ -366,6 +378,9 @@ class ConnectedGUIWindow:
         self.connectedDialog.ui = connectedDialog()
         self.connectedDialog.ui.setupUi(self.connectedDialog)
         self.connectedDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.connectedDialog.setWindowFlag(
+            Qt.WindowCloseButtonHint, False)
 
         self.connectedDialog.ui.oneOnOneChatButton.clicked.connect(
             self.onSingleChatOpen)
@@ -562,6 +577,9 @@ class ConnectionGUIWindow:
         self.mainWindowUI = Ui_ConnectionWindow()
         self.mainWindowUI.setupUi(self.connectionWindow)
 
+        self.connectionWindow.setWindowFlag(
+            Qt.WindowCloseButtonHint, False)
+
         # Add on connect button click
         self.mainWindowUI.connectButton.clicked.connect(
             self.onConnectButtonClick)
@@ -574,11 +592,16 @@ class ConnectionGUIWindow:
         # Show it
         self.connectionWindow.show()
 
+        app.aboutToQuit.connect(self.onCancelClick)
+
         # Keeps it open until closed
-        sys.exit(app.exec_())
+        app.exec_()
 
     def onCancelClick(self):
         self.connectionWindow.close()
+        # self.mainInstance.clientInstance.sendMessageToServer((
+        #     ActionType.userQuitServer, "test"))
+        sys.exit(0)
 
     def onConnectButtonClick(self):
         # Get the ip, port and client name

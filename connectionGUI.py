@@ -9,7 +9,6 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from connectedGUI import Ui_Dialog as connectedDialog
 
 
 class Ui_ConnectionWindow(object):

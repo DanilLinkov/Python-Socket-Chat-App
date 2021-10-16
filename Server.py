@@ -154,54 +154,58 @@ class ServerSocket(threading.Thread):
 
     def run(self):
         while True:
-            messageFromClient = receive(self.client)
-            print(messageFromClient)
+            try:
+                messageFromClient = receive(self.client)
+                print(messageFromClient)
 
-            if messageFromClient:
-                messageType = messageFromClient[0]
+                if messageFromClient:
+                    messageType = messageFromClient[0]
 
-                if messageType == ActionType.sendMessage:
-                    # Send message to the userTo
-                    toUser = messageFromClient[1]
-                    actualMessage = messageFromClient[2]
+                    if messageType == ActionType.sendMessage:
+                        # Send message to the userTo
+                        toUser = messageFromClient[1]
+                        actualMessage = messageFromClient[2]
 
-                    self.serverInstance.sendMessageToSingleClient(
-                        toUser, (ActionType.receiveMessage, self.clientName, actualMessage))
+                        self.serverInstance.sendMessageToSingleClient(
+                            toUser, (ActionType.receiveMessage, self.clientName, actualMessage))
 
-                elif messageType == ActionType.createRoom:
-                    # Create the room and let everyone know a room has been made
-                    self.serverInstance.createNewRoom(self)
+                    elif messageType == ActionType.createRoom:
+                        # Create the room and let everyone know a room has been made
+                        self.serverInstance.createNewRoom(self)
 
-                elif messageType == ActionType.groupUserJoined:
-                    # Add user to group and let everyone know a new user has joined the group
-                    self.serverInstance.addUserToGroup(
-                        self, messageFromClient[1])
+                    elif messageType == ActionType.groupUserJoined:
+                        # Add user to group and let everyone know a new user has joined the group
+                        self.serverInstance.addUserToGroup(
+                            self, messageFromClient[1])
 
-                elif messageType == ActionType.sendGroup:
-                    toGroup = messageFromClient[1]
-                    actualMessage = messageFromClient[2]
+                    elif messageType == ActionType.sendGroup:
+                        toGroup = messageFromClient[1]
+                        actualMessage = messageFromClient[2]
 
-                    group = self.serverInstance.findGroupByString(toGroup)
-                    self.serverInstance.sendMessageToGroup(
-                        group, (ActionType.receiveGroup, self.clientName, actualMessage))
+                        group = self.serverInstance.findGroupByString(toGroup)
+                        self.serverInstance.sendMessageToGroup(
+                            group, (ActionType.receiveGroup, self.clientName, actualMessage))
 
-                elif messageType == ActionType.invite:
-                    toUser = messageFromClient[1]
-                    toGroup = messageFromClient[2]
+                    elif messageType == ActionType.invite:
+                        toUser = messageFromClient[1]
+                        toGroup = messageFromClient[2]
 
-                    self.serverInstance.sendMessageToSingleClient(
-                        toUser, (ActionType.invite, self.clientName, toGroup))
+                        self.serverInstance.sendMessageToSingleClient(
+                            toUser, (ActionType.invite, self.clientName, toGroup))
 
-                elif messageType == ActionType.userQuitServer:
-                    print(f'Client: {self.clientName} has disconected.')
-                    self.serverInstance.removeClientFromClientsList(self)
+                    elif messageType == ActionType.userQuitServer:
+                        print(f'Client: {self.clientName} has disconected.')
+                        self.serverInstance.removeClientFromClientsList(self)
 
-                elif messageType == ActionType.userQuitGroup:
+                    elif messageType == ActionType.userQuitGroup:
+                        self.serverInstance.removeClientFromGroups(self)
+
+                else:
+                    print(
+                        f'Client: {self.clientName} has closed the connection.')
                     self.serverInstance.removeClientFromGroups(self)
-
-            else:
-                print(f'Client: {self.clientName} has closed the connection.')
-                self.serverInstance.removeClientFromGroups(self)
+            except:
+                pass
 
     def sendMessageToClient(self, messageAsTuple):
         send(self.client, messageAsTuple)
