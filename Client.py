@@ -248,6 +248,14 @@ class GroupChatGUIWindow:
         InviteUserGUIWindow(self.mainInstance, self)
 
     def updateUsersInGroupLabels(self, newUserList):
+        # Check if invite window open
+        if self.inviteUserGUIWindow is not None:
+            # update the invite list labels
+            notInGroupUserList = [
+                x for x in self.parent.connectedUsersList if x not in newUserList]
+            self.inviteUserGUIWindow.updateUserLabels(
+                notInGroupUserList)
+
         self.clearLayout(self.groupChatDialog.ui.membersListLayout)
         self.usersInGroupLabelList = []
         self.usersInGroup = newUserList
@@ -388,6 +396,9 @@ class ConnectedGUIWindow:
     def onCloseClick(self):
         self.connectedDialog.close()
         self.parent.connectedGUIWindow = None
+
+        self.mainInstance.clientInstance.sendMessageToServer((
+            ActionType.userQuitServer, "test"))
 
     def joinGroupFromInvite(self, toGroup):
         # close all the other popups and make them join the group
