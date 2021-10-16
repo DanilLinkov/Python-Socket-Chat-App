@@ -14,6 +14,7 @@ from connectedGUI import Ui_Dialog as connectedDialog
 from oneOnOneGUI import Ui_oneOnOneWindow as oneOnOneDialog
 from groupChatGUI import Ui_groupChat as groupDialog
 from inviteGUI import Ui_inviteWindow as inviteDialog
+from groupInvitePopup import Ui_Dialog as groupInviteDialog
 
 from Utils import *
 from ActionEnum import ActionType
@@ -60,9 +61,8 @@ class Receive(QThread):
                             self.newGroupMessage.emit(
                                 serverMessage[1], serverMessage[2])
                         elif messageType == ActionType.invite:
-                            print(serverMessage[1] + " , " + serverMessage[2])
-                            # self.newInviteToGroup.emit(
-                            #     serverMessage[1], serverMessage[2])
+                            self.newInviteToGroup.emit(
+                                serverMessage[1], serverMessage[2])
 
                     else:
                         print("Connection shut down.")
@@ -92,6 +92,39 @@ class Client:
         send(self.clientSocket, messageAsTuple)
 
 
+class groupInvitePopup:
+    def __init__(self, mainInstance, parent, fromUser, toGroup):
+        self.mainInstance = mainInstance
+        self.parent = parent
+        self.toGroup = toGroup
+
+        parent.groupInviteGUIWindow = self
+
+        self.groupInviteDialog = QDialog()
+        self.groupInviteDialog.ui = groupInviteDialog()
+        self.groupInviteDialog.ui.setupUi(self.groupInviteDialog)
+        self.groupInviteDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.groupInviteDialog.ui.label.setText(
+            f"You have an invite from {fromUser}\n To group {toGroup}\n Accept to join or decline to close this popup.")
+
+        self.groupInviteDialog.ui.acceptButton.clicked.connect(
+            self.acceptInvite)
+
+        self.groupInviteDialog.ui.declineButton.clicked.connect(
+            self.declineInvite)
+
+        self.groupInviteDialog.exec_()
+
+    def acceptInvite(self):
+        self.groupInviteDialog.close()
+        self.parent.joinGroupFromInvite(self.toGroup)
+
+    def declineInvite(self):
+        self.parent.groupInviteGUIWindow = None
+        self.groupInviteDialog.close()
+
+
 class InviteUserGUIWindow:
     def __init__(self, mainInstance, parent):
         self.mainInstance = mainInstance
@@ -110,15 +143,18 @@ class InviteUserGUIWindow:
         self.selectedUserToInviteLabel = None
         self.usersNotInTheGroupLabelList = []
 
-        print(self.parent.usersInGroup)
-        print(self.parent.parent.connectedUsersList)
-
         self.updateUserLabels([
             x for x in self.parent.parent.connectedUsersList if x not in self.parent.usersInGroup])
 
         self.inviteChatDialog.exec_()
 
+    def closeAllWindowsFromThis(self):
+        self.parent.inviteUserGUIWindow = None
+        self.inviteChatDialog.close()
+
     def onInviteUserClick(self):
+        self.parent.inviteUserGUIWindow = None
+        self.closeAllWindowsFromThis()
         # Make client send message to server to invite toUser, groupName
         self.mainInstance.clientInstance.sendMessageToServer(
             (ActionType.invite, self.selectedUserToInviteLabel.text(), self.parent.groupName))
@@ -136,7 +172,7 @@ class InviteUserGUIWindow:
 
         self.clearLayout(self.inviteChatDialog.ui.inviteListLayout)
         self.usersNotInTheGroupLabelList = []
-        self.selectedUserToInviteLabel = None
+        # self.selectedUserToInviteLabel = None
 
         self.inviteChatDialog.ui.inviteListLayout.setAlignment(
             Qt.AlignTop)
@@ -190,6 +226,14 @@ class GroupChatGUIWindow:
 
         self.groupChatDialog.exec_()
 
+    def closeAllWindowsFromThis(self):
+        if self.inviteUserGUIWindow is not None:
+            # call its close
+            self.inviteUserGUIWindow.closeAllWindowsFromThis()
+            self.inviteUserGUIWindow = None
+
+        self.groupChatDialog.close()
+
     def onInviteClick(self):
         # Create Invite dialog
         self.inviteUserGUIWindow = None
@@ -220,9 +264,6 @@ class GroupChatGUIWindow:
     def onSendGroupMessageButtonClick(self):
         self.mainInstance.clientInstance.sendMessageToServer(
             (ActionType.sendGroup, self.groupName, self.groupChatDialog.ui.groupMessageEdit.text()))
-
-        # self.appendMessageLabel(self.mainInstance.clientInstance.clientName,
-        #                         self.oneOnOneDialog.ui.groupMessageEdit.text())
 
     def appendMessageLabel(self, userName, message):
         self.groupChatDialog.ui.messagesScrollLayoutGroup.setAlignment(
@@ -264,6 +305,9 @@ class SingleChatGUIWindow:
             self.appendMessageLabel(newMessage[0], newMessage[1])
 
         self.oneOnOneDialog.exec_()
+
+    def closeAllWindowsFromThis(self):
+        self.oneOnOneDialog.close()
 
     def onSendMessageButtonClick(self):
         self.mainInstance.clientInstance.sendMessageToServer(
@@ -319,7 +363,36 @@ class ConnectedGUIWindow:
 
         self.connectedUsersList = []
 
+        self.groupInviteGUIWindow = None
+
         self.connectedDialog.exec_()
+
+    def joinGroupFromInvite(self, toGroup):
+        # close all the other popups and make them join the group
+        self.closeAllWindowsFromThis()
+
+        self.mainInstance.clientInstance.sendMessageToServer(
+            (ActionType.groupUserJoined, toGroup))
+
+        GroupChatGUIWindow(self.mainInstance, self, toGroup)
+
+    def closeAllWindowsFromThis(self):
+        if self.singleChatGUIWindow is not None:
+            # call its close
+            self.singleChatGUIWindow.closeAllWindowsFromThis()
+            self.singleChatGUIWindow = None
+            self.selectedGroupChatLabel = None
+
+        if self.groupChatGUIWindow is not None:
+            # call its close
+            self.groupChatGUIWindow.closeAllWindowsFromThis()
+            self.groupChatGUIWindow = None
+            self.selectedGroupChatLabel = None
+
+        self.groupInviteGUIWindow = None
+
+    def openInvitePopUp(self, fromUser, toGroup):
+        groupInvitePopup(self.mainInstance, self, fromUser, toGroup)
 
     def onJoinClick(self):
         if self.selectedGroupChatLabel is not None:
@@ -510,6 +583,9 @@ class main():
         self.receivedMessagesThread.newGroupMessage.connect(
             self.gotGroupMessage)
 
+        self.receivedMessagesThread.newInviteToGroup.connect(
+            self.gotGroupInvite)
+
         self.receivedMessagesThread.start()
 
     def updateUserLabels(self, newUserList):
@@ -534,6 +610,10 @@ class main():
     def gotGroupMessage(self, userFrom, message):
         self.mainGuiWindow.connectedGUIWindow.groupChatGUIWindow.appendMessageLabel(
             userFrom, message)
+
+    def gotGroupInvite(self, userFrom, toGroup):
+        self.mainGuiWindow.connectedGUIWindow.openInvitePopUp(
+            userFrom, toGroup)
 
 
 if __name__ == "__main__":
