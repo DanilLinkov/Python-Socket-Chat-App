@@ -462,37 +462,17 @@ class ConnectedGUIWindow:
             (ActionType.createRoom, "test"))
 
     def updateGroupLabels(self, newGroupsList):
-        self.clearLayout(self.connectedDialog.ui.chatRoomsListLayout)
-
+        self.clearLayout(self.connectedDialog.ui.groupListWidget)
         self.groupsLabelList = []
         self.selectedGroupChatLabel = None
 
-        self.connectedDialog.ui.chatRoomsListLayout.setAlignment(
-            Qt.AlignTop)
-
         for group in newGroupsList:
-            newGroupLabel = QLabel()
-            font = QFont()
-            font.setPointSize(15)
-            newGroupLabel.setFont(font)
-            newGroupLabel.setObjectName(group)
-            newGroupLabel.setText(group)
+            self.connectedDialog.ui.groupListWidget.addItem(group)
 
-            self.groupsLabelList.append(newGroupLabel)
-
-            newGroupLabel.setFixedSize(200, 50)
-
-            # Make it clickable by passing it through a custom clickable class
-            clickable(newGroupLabel).connect(self.onSingleGroupClick)
-
-            self.connectedDialog.ui.chatRoomsListLayout.addWidget(
-                newGroupLabel)
+        self.connectedDialog.ui.groupListWidget.itemClicked.connect(
+            self.onSingleGroupClick)
 
     def onSingleGroupClick(self, label):
-        for l in self.groupsLabelList:
-            l.setStyleSheet("background-color: white")
-
-        label.setStyleSheet("background-color: grey")
         self.selectedGroupChatLabel = label
 
     def onSingleChatOpen(self):
@@ -500,12 +480,8 @@ class ConnectedGUIWindow:
             SingleChatGUIWindow(self.mainInstance, self,
                                 self.selectedSingleChatLabel.text())
 
-    def onSingleUserLabelClick(self, label):
-        for l in self.joinedUsersLabelList:
-            l.setStyleSheet("background-color: white")
-
-        label.setStyleSheet("background-color: grey")
-        self.selectedSingleChatLabel = label
+    def onSingleUserLabelClick(self, item):
+        self.selectedSingleChatLabel = item
 
     def updateUserLabels(self, newUserList):
         # Check if in group chat and if invite window open
@@ -516,34 +492,19 @@ class ConnectedGUIWindow:
             self.groupChatGUIWindow.inviteUserGUIWindow.updateUserLabels(
                 notInGroupUserList)
 
-        self.clearLayout(self.connectedDialog.ui.clientsListLayout)
+        self.clearLayout(self.connectedDialog.ui.usersListWidget)
         self.joinedUsersLabelList = []
         self.connectedUsersList = newUserList
         self.selectedSingleChatLabel = None
 
-        self.connectedDialog.ui.clientsListLayout.setAlignment(
-            Qt.AlignTop)
-
         for user in newUserList:
-            newUserLabel = QLabel()
-            font = QFont()
-            font.setPointSize(15)
-            newUserLabel.setFont(font)
-            newUserLabel.setObjectName(user)
-            newUserLabel.setText(user)
+            self.connectedDialog.ui.usersListWidget.addItem(user)
 
-            self.joinedUsersLabelList.append(newUserLabel)
-
-            newUserLabel.setFixedSize(200, 50)
-
-            # Make it clickable by passing it through a custom clickable class
-            clickable(newUserLabel).connect(self.onSingleUserLabelClick)
-
-            self.connectedDialog.ui.clientsListLayout.addWidget(newUserLabel)
+        self.connectedDialog.ui.usersListWidget.itemClicked.connect(
+            self.onSingleUserLabelClick)
 
     def clearLayout(self, layoutToClear):
-        for i in reversed(range(layoutToClear.count())):
-            layoutToClear.itemAt(i).widget().deleteLater()
+        layoutToClear.clear()
 
 
 # Source https://wiki.python.org/moin/PyQt/Making%20non-clickable%20widgets%20clickable
