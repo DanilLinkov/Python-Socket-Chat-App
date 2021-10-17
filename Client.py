@@ -319,6 +319,7 @@ class SingleChatGUIWindow:
     def __init__(self, mainInstance, parent, toUserName, newMessage=None):
         self.mainInstance = mainInstance
         self.toUserName = toUserName
+        self.parent = parent
 
         parent.singleChatGUIWindow = self
 
@@ -342,6 +343,7 @@ class SingleChatGUIWindow:
         self.oneOnOneDialog.exec_()
 
     def onCloseClick(self):
+        self.parent.singleChatGUIWindow = None
         self.oneOnOneDialog.close()
 
     def closeAllWindowsFromThis(self):
@@ -355,18 +357,8 @@ class SingleChatGUIWindow:
                                 self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
 
     def appendMessageLabel(self, userName, message):
-        self.oneOnOneDialog.ui.messagesScrollLayout.setAlignment(Qt.AlignTop)
-
-        newMessageLabel = QLabel()
-        font = QFont()
-        font.setPointSize(15)
-        newMessageLabel.setFont(font)
-        newMessageLabel.setObjectName(userName)
-        newMessageLabel.setText(userName.split(":")[0]+" => "+message)
-
-        newMessageLabel.setFixedSize(200, 50)
-
-        self.oneOnOneDialog.ui.messagesScrollLayout.addWidget(newMessageLabel)
+        self.oneOnOneDialog.ui.singleChatListWidget.addItem(
+            userName+" said > "+message)
 
 
 class ConnectedGUIWindow:
