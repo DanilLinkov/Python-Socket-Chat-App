@@ -269,50 +269,23 @@ class GroupChatGUIWindow:
             self.inviteUserGUIWindow.updateUserLabels(
                 notInGroupUserList)
 
-        self.clearLayout(self.groupChatDialog.ui.membersListLayout)
+        self.clearLayout(self.groupChatDialog.ui.membersListWidget)
         self.usersInGroupLabelList = []
         self.usersInGroup = newUserList
 
-        self.groupChatDialog.ui.membersListLayout.setAlignment(
-            Qt.AlignTop)
-
         for user in newUserList:
-            newUserLabel = QLabel()
-            font = QFont()
-            font.setPointSize(15)
-            newUserLabel.setFont(font)
-            newUserLabel.setObjectName(user)
-            newUserLabel.setText(user)
-
-            self.usersInGroupLabelList.append(newUserLabel)
-
-            newUserLabel.setFixedSize(200, 50)
-
-            self.groupChatDialog.ui.membersListLayout.addWidget(newUserLabel)
+            self.groupChatDialog.ui.membersListWidget.addItem(user)
 
     def onSendGroupMessageButtonClick(self):
         self.mainInstance.clientInstance.sendMessageToServer(
             (ActionType.sendGroup, self.groupName, self.groupChatDialog.ui.groupMessageEdit.text()))
 
     def appendMessageLabel(self, userName, message):
-        self.groupChatDialog.ui.messagesScrollLayoutGroup.setAlignment(
-            Qt.AlignTop)
-
-        newMessageLabel = QLabel()
-        font = QFont()
-        font.setPointSize(15)
-        newMessageLabel.setFont(font)
-        newMessageLabel.setObjectName(userName)
-        newMessageLabel.setText(userName.split(":")[0]+" => "+message)
-
-        newMessageLabel.setFixedSize(200, 50)
-
-        self.groupChatDialog.ui.messagesScrollLayoutGroup.addWidget(
-            newMessageLabel)
+        self.groupChatDialog.ui.groupChatListWidget.addItem(
+            userName+" said > "+message)
 
     def clearLayout(self, layoutToClear):
-        for i in reversed(range(layoutToClear.count())):
-            layoutToClear.itemAt(i).widget().deleteLater()
+        layoutToClear.clear()
 
 
 class SingleChatGUIWindow:
