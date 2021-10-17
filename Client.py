@@ -169,43 +169,20 @@ class InviteUserGUIWindow:
             (ActionType.invite, self.selectedUserToInviteLabel.text(), self.parent.groupName))
 
     def onSingleUserLabelClick(self, label):
-        for l in self.usersNotInTheGroupLabelList:
-            l.setStyleSheet("background-color: white")
-
-        label.setStyleSheet("background-color: grey")
         self.selectedUserToInviteLabel = label
 
     def updateUserLabels(self, newUserList):
-        # Minus users in the group from the newUserList
-        print(newUserList)
-
-        self.clearLayout(self.inviteChatDialog.ui.inviteListLayout)
+        self.clearLayout(self.inviteChatDialog.ui.inviteListWidget)
         self.usersNotInTheGroupLabelList = []
-        # self.selectedUserToInviteLabel = None
-
-        self.inviteChatDialog.ui.inviteListLayout.setAlignment(
-            Qt.AlignTop)
 
         for user in newUserList:
-            newUserLabel = QLabel()
-            font = QFont()
-            font.setPointSize(15)
-            newUserLabel.setFont(font)
-            newUserLabel.setObjectName(user)
-            newUserLabel.setText(user)
+            self.inviteChatDialog.ui.inviteListWidget.addItem(user)
 
-            self.usersNotInTheGroupLabelList.append(newUserLabel)
-
-            newUserLabel.setFixedSize(200, 50)
-
-            # Make it clickable by passing it through a custom clickable class
-            clickable(newUserLabel).connect(self.onSingleUserLabelClick)
-
-            self.inviteChatDialog.ui.inviteListLayout.addWidget(newUserLabel)
+        self.inviteChatDialog.ui.inviteListWidget.itemClicked.connect(
+            self.onSingleUserLabelClick)
 
     def clearLayout(self, layoutToClear):
-        for i in reversed(range(layoutToClear.count())):
-            layoutToClear.itemAt(i).widget().deleteLater()
+        layoutToClear.clear()
 
 
 class GroupChatGUIWindow:
