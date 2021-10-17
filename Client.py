@@ -495,26 +495,6 @@ class ConnectedGUIWindow:
         layoutToClear.clear()
 
 
-# Source https://wiki.python.org/moin/PyQt/Making%20non-clickable%20widgets%20clickable
-# Allows for labels to emit on click events
-def clickable(widget):
-
-    class Filter(QObject):
-        clicked = pyqtSignal(object)
-
-        def eventFilter(self, obj, event):
-            if obj == widget:
-                if event.type() == QEvent.MouseButtonRelease:
-                    if obj.rect().contains(event.pos()):
-                        self.clicked.emit(obj)
-                        return True
-                return False
-
-    filter = Filter(widget)
-    widget.installEventFilter(filter)
-    return filter.clicked
-
-
 class ConnectionGUIWindow:
     def __init__(self, mainInstance):
         self.mainInstance = mainInstance
