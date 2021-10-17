@@ -70,6 +70,7 @@ class Ui_groupChat(object):
         self.chatTitle.setObjectName("chatTitle")
         self.chatTitle_2 = QtWidgets.QLabel(groupChat)
         self.chatTitle_2.setGeometry(QtCore.QRect(470, 30, 139, 25))
+        self.chatTitle.resize(300, 30)
         font = QtGui.QFont()
         font.setPointSize(16)
         self.chatTitle_2.setFont(font)

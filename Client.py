@@ -194,6 +194,7 @@ class GroupChatGUIWindow:
         self.mainInstance = mainInstance
         self.groupName = groupName
 
+        print(groupName)
         self.groupOwner = groupName.split("by ")[1]
 
         self.clientIsHost = self.groupOwner == self.mainInstance.clientInstance.clientName
@@ -206,6 +207,8 @@ class GroupChatGUIWindow:
         self.groupChatDialog.ui = groupDialog()
         self.groupChatDialog.ui.setupUi(self.groupChatDialog)
         self.groupChatDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.groupChatDialog.ui.chatTitle.setText(groupName)
 
         self.groupChatDialog.setWindowFlag(
             Qt.WindowCloseButtonHint, False)
@@ -308,6 +311,8 @@ class SingleChatGUIWindow:
         self.oneOnOneDialog.ui = oneOnOneDialog()
         self.oneOnOneDialog.ui.setupUi(self.oneOnOneDialog)
         self.oneOnOneDialog.setAttribute(Qt.WA_DeleteOnClose)
+
+        self.oneOnOneDialog.ui.chatTitle.setText("Chat with "+toUserName)
 
         self.oneOnOneDialog.setWindowFlag(
             Qt.WindowCloseButtonHint, False)
@@ -605,6 +610,10 @@ class main():
     def gotSingleMessage(self, userFrom, message):
         # Create new Single chat popup and update messages
         if self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow is None:
+            SingleChatGUIWindow(
+                self, self.mainGuiWindow.connectedGUIWindow, userFrom, (userFrom, message))
+        elif userFrom != self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow.toUserName:
+            self.mainGuiWindow.connectedGUIWindow.singleChatGUIWindow.closeAllWindowsFromThis()
             SingleChatGUIWindow(
                 self, self.mainGuiWindow.connectedGUIWindow, userFrom, (userFrom, message))
         else:

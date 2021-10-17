@@ -54,6 +54,7 @@ class Ui_oneOnOneWindow(object):
         font.setPointSize(16)
         self.chatTitle.setFont(font)
         self.chatTitle.setObjectName("chatTitle")
+        self.chatTitle.resize(300, 30)
 
         self.retranslateUi(oneOnOneWindow)
         QtCore.QMetaObject.connectSlotsByName(oneOnOneWindow)
