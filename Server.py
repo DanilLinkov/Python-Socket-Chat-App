@@ -62,6 +62,8 @@ class Server(threading.Thread):
                     self.clientsList.append(newServerSocket)
 
                     # Broadcast to all the other users that a new client joined
+                    newServerSocket.sendMessageToClient(
+                        ("clientName", clientName + ":" + str(client.fileno())))
                     self.updateConnectedClientsList()
                     self.sendMessageToAllClients(
                         (ActionType.createRoom, self.getListOfGroupsNames()))

@@ -5,6 +5,8 @@ import os
 import sys
 import select
 
+from datetime import datetime
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -85,6 +87,8 @@ class Client:
 
         # Send the server the client's name
         self.sendMessageToServer(self.clientName)
+
+        self.clientName = receive(self.clientSocket)[1]
 
         print(f'Connected to {self.host}:{self.port} as {self.clientName}.')
 
@@ -190,6 +194,10 @@ class GroupChatGUIWindow:
         self.mainInstance = mainInstance
         self.groupName = groupName
 
+        self.groupOwner = groupName.split("by ")[1]
+
+        self.clientIsHost = self.groupOwner == self.mainInstance.clientInstance.clientName
+
         self.parent = parent
 
         parent.groupChatGUIWindow = self
@@ -251,15 +259,38 @@ class GroupChatGUIWindow:
         self.usersInGroup = newUserList
 
         for user in newUserList:
-            self.groupChatDialog.ui.membersListWidget.addItem(user)
+            if self.clientIsHost and user == self.mainInstance.clientInstance.clientName:
+                self.groupChatDialog.ui.membersListWidget.addItem(
+                    user+" (me) (host)")
+            elif user == self.mainInstance.clientInstance.clientName:
+                self.groupChatDialog.ui.membersListWidget.addItem(
+                    user+" (me)")
+            elif user == self.groupOwner:
+                self.groupChatDialog.ui.membersListWidget.addItem(
+                    user+" (host)")
+            else:
+                self.groupChatDialog.ui.membersListWidget.addItem(user)
 
     def onSendGroupMessageButtonClick(self):
         self.mainInstance.clientInstance.sendMessageToServer(
             (ActionType.sendGroup, self.groupName, self.groupChatDialog.ui.groupMessageEdit.text()))
 
     def appendMessageLabel(self, userName, message):
-        self.groupChatDialog.ui.groupChatListWidget.addItem(
-            userName+" said > "+message)
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+
+        if self.clientIsHost and userName == self.mainInstance.clientInstance.clientName:
+            self.groupChatDialog.ui.groupChatListWidget.addItem(
+                "("+current_time+") " + "I (host) said > "+message)
+        elif userName == self.mainInstance.clientInstance.clientName:
+            self.groupChatDialog.ui.groupChatListWidget.addItem(
+                "("+current_time+") " + " I said > "+message)
+        elif userName == self.groupOwner:
+            self.groupChatDialog.ui.groupChatListWidget.addItem(
+                "("+current_time+") " + userName+" (host) said > "+message)
+        else:
+            self.groupChatDialog.ui.groupChatListWidget.addItem(
+                "("+current_time+") " + userName+" said > "+message)
 
     def clearLayout(self, layoutToClear):
         layoutToClear.clear()
@@ -307,8 +338,15 @@ class SingleChatGUIWindow:
                                 self.oneOnOneDialog.ui.oneOnOneMessageEdit.text())
 
     def appendMessageLabel(self, userName, message):
-        self.oneOnOneDialog.ui.singleChatListWidget.addItem(
-            userName+" said > "+message)
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+
+        if userName == self.mainInstance.clientInstance.clientName:
+            self.oneOnOneDialog.ui.singleChatListWidget.addItem(
+                "("+current_time+") " + " I said > "+message)
+        else:
+            self.oneOnOneDialog.ui.singleChatListWidget.addItem(
+                "("+current_time+") " + userName+" said > "+message)
 
 
 class ConnectedGUIWindow:
@@ -391,7 +429,6 @@ class ConnectedGUIWindow:
     def onJoinClick(self):
         if self.selectedGroupChatLabel is not None:
             # Send user joined group message to server
-            print("added user again")
             self.mainInstance.clientInstance.sendMessageToServer(
                 (ActionType.groupUserJoined, self.selectedGroupChatLabel.text()))
 
@@ -423,7 +460,8 @@ class ConnectedGUIWindow:
                                 self.selectedSingleChatLabel.text())
 
     def onSingleUserLabelClick(self, item):
-        self.selectedSingleChatLabel = item
+        if "(me)" not in item.text():
+            self.selectedSingleChatLabel = item
 
     def updateUserLabels(self, newUserList):
         # Check if in group chat and if invite window open
@@ -440,7 +478,10 @@ class ConnectedGUIWindow:
         self.selectedSingleChatLabel = None
 
         for user in newUserList:
-            self.connectedDialog.ui.usersListWidget.addItem(user)
+            if user == self.mainInstance.clientInstance.clientName:
+                self.connectedDialog.ui.usersListWidget.addItem(user+" (me)")
+            else:
+                self.connectedDialog.ui.usersListWidget.addItem(user)
 
         self.connectedDialog.ui.usersListWidget.itemClicked.connect(
             self.onSingleUserLabelClick)
