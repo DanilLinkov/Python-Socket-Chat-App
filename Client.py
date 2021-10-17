@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import select
+import ssl
 
 from datetime import datetime
 
@@ -77,7 +78,10 @@ class Client:
         self.port = port
         self.clientName = clientName
 
-        self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+
+        self.clientSocket = self.context.wrap_socket(
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM), server_hostname=host)
 
     def start(self):
         print(f'Attempting to connect to {self.host}:{self.port}...')

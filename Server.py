@@ -6,9 +6,13 @@ import argparse
 import os
 import select
 import sys
+import signal
+import ssl
 from ActionEnum import ActionType
 
 from Utils import *
+
+SERVER_HOST = 'localhost'
 
 
 class Server(threading.Thread):
@@ -21,6 +25,11 @@ class Server(threading.Thread):
         self.host = host
         self.port = port
 
+        self.context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        self.context.load_cert_chain(certfile="cert.pem", keyfile="cert.pem")
+        self.context.load_verify_locations('cert.pem')
+        self.context.set_ciphers('AES128-SHA')
+
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.host, self.port))
@@ -28,7 +37,17 @@ class Server(threading.Thread):
         self.server.listen(5)
         print('Server listening at', self.server.getsockname())
 
+        self.server = self.context.wrap_socket(self.server, server_side=True)
+
         self.inputs = [self.server]
+
+    def close(self,):
+        print('Shutting down server...')
+
+        for client in self.clientsList:
+            client.close()
+
+        self.server.close()
 
     def run(self):
         while True:
@@ -154,6 +173,9 @@ class ServerSocket(threading.Thread):
         self.clientName = clientName
         self.serverInstance = serverInstance
 
+    def close(self):
+        self.client.close()
+
     def run(self):
         while True:
             try:
@@ -213,7 +235,29 @@ class ServerSocket(threading.Thread):
         send(self.client, messageAsTuple)
 
 
+def exit(server):
+    while True:
+        ipt = input('Type q to quit\n')
+        if ipt == 'q':
+            print('Closing all connections...')
+            server.close()
+            print('Shutting down the server...')
+            os._exit(0)
+
+
 if __name__ == "__main__":
     # Take input from console later
-    server = Server("localhost", 9988)
+    # parser = argparse.ArgumentParser(
+    #     description='Socket Server Example with Select')
+    # parser.add_argument('--name', action="store", dest="name", required=True)
+    # parser.add_argument('--port', action="store",
+    #                     dest="port", type=int, required=True)
+    # given_args = parser.parse_args()
+    # port = given_args.port
+    # name = given_args.name
+
+    server = Server(SERVER_HOST, 9988)
     server.start()
+
+    exit = threading.Thread(target=exit, args=(server,))
+    exit.start()
