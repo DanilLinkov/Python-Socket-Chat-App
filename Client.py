@@ -196,11 +196,12 @@ class InviteUserGUIWindow:
 
     # Send a message to the server that we want to invite this user to our group
     def onInviteUserClick(self):
-        self.parent.inviteUserGUIWindow = None
-        self.closeAllWindowsFromThis()
-        # Make client send message to server to invite toUser, groupName
-        self.mainInstance.clientInstance.sendMessageToServer(
-            (ActionType.invite, self.selectedUserToInviteLabel.text(), self.parent.groupName))
+        if self.selectedUserToInviteLabel:
+            self.parent.inviteUserGUIWindow = None
+            self.closeAllWindowsFromThis()
+            # Make client send message to server to invite toUser, groupName
+            self.mainInstance.clientInstance.sendMessageToServer(
+                (ActionType.invite, self.selectedUserToInviteLabel.text(), self.parent.groupName))
 
     # Set the selected label
     def onSingleUserLabelClick(self, label):
@@ -593,20 +594,23 @@ class ConnectionGUIWindow:
         sys.exit(0)
 
     def onConnectButtonClick(self):
-        # Get the ip, port and client name
-        ip = self.mainWindowUI.ipAddressLineEdit.text()
-        port = int(self.mainWindowUI.portLineEdit.text())
-        clientName = self.mainWindowUI.nickNameLineEdit.text()
+        try:
+            # Get the ip, port and client name
+            ip = self.mainWindowUI.ipAddressLineEdit.text()
+            port = int(self.mainWindowUI.portLineEdit.text())
+            clientName = self.mainWindowUI.nickNameLineEdit.text()
 
-        # For testing
-        # ip = "localhost"
-        # port = 9988
+            # For testing
+            # ip = "localhost"
+            # port = 9988
 
-        self.mainInstance.createNewClient(ip, port, clientName)
+            self.mainInstance.createNewClient(ip, port, clientName)
 
-        # Instantiate new connected user chat window
-        self.connectedGUIWindow = None
-        ConnectedGUIWindow(self.mainInstance, self)
+            # Instantiate new connected user chat window
+            self.connectedGUIWindow = None
+            ConnectedGUIWindow(self.mainInstance, self)
+        except:
+            print("Bad user input!")
 
 
 class main():
@@ -622,33 +626,37 @@ class main():
         ConnectionGUIWindow(self)
 
     def createNewClient(self, ip, port, clientName):
-        # Instantiate Client and start it
-        self.clientInstance = Client(ip, port, clientName)
-        self.clientInstance.start()
 
-        # Create a seperate thread to listen for any messages from the server
-        self.receivedMessagesThread = Receive(self.clientInstance)
+        try:
+            # Instantiate Client and start it
+            self.clientInstance = Client(ip, port, clientName)
+            self.clientInstance.start()
 
-        # Connect methods to the signals
-        self.receivedMessagesThread.newConnectedUsersList.connect(
-            self.updateUserLabels)
+            # Create a seperate thread to listen for any messages from the server
+            self.receivedMessagesThread = Receive(self.clientInstance)
 
-        self.receivedMessagesThread.newSingleMessage.connect(
-            self.gotSingleMessage)
+            # Connect methods to the signals
+            self.receivedMessagesThread.newConnectedUsersList.connect(
+                self.updateUserLabels)
 
-        self.receivedMessagesThread.newGroupsList.connect(
-            self.updateGroupLabels)
+            self.receivedMessagesThread.newSingleMessage.connect(
+                self.gotSingleMessage)
 
-        self.receivedMessagesThread.newUserListInGroup.connect(
-            self.updateUsersInGroupLabels)
+            self.receivedMessagesThread.newGroupsList.connect(
+                self.updateGroupLabels)
 
-        self.receivedMessagesThread.newGroupMessage.connect(
-            self.gotGroupMessage)
+            self.receivedMessagesThread.newUserListInGroup.connect(
+                self.updateUsersInGroupLabels)
 
-        self.receivedMessagesThread.newInviteToGroup.connect(
-            self.gotGroupInvite)
+            self.receivedMessagesThread.newGroupMessage.connect(
+                self.gotGroupMessage)
 
-        self.receivedMessagesThread.start()
+            self.receivedMessagesThread.newInviteToGroup.connect(
+                self.gotGroupInvite)
+
+            self.receivedMessagesThread.start()
+        except:
+            print("Bad user input!")
 
     def updateUserLabels(self, newUserList):
         self.mainGuiWindow.connectedGUIWindow.updateUserLabels(newUserList)
