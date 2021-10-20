@@ -119,7 +119,7 @@ class Server(threading.Thread):
                 group[1].remove(clientSocketToRemove)
                 # Let the people in the group know that the user left
                 self.sendMessageToGroup(
-                    group, (ActionType.groupUsersListUpdate, self.getUserNamesListInGroup(group)))
+                    group, (ActionType.groupUsersListUpdate, self.getUserNamesListInGroup(group), "", str(clientSocketToRemove.clientName)))
 
     def updateConnectedClientsList(self):
         # Send a list of all the clients connected to the server to all the clients
@@ -178,7 +178,7 @@ class Server(threading.Thread):
             if groupToJoin == "Room "+str(i)+" by "+group[0].clientName:
                 group[1].append(newUser)
                 self.sendMessageToGroup(
-                    group, (ActionType.groupUsersListUpdate, self.getUserNamesListInGroup(group)))
+                    group, (ActionType.groupUsersListUpdate, self.getUserNamesListInGroup(group), str(newUser.clientName), ""))
 
     def sendMessageToGroup(self, group, messageAsTuple):
         # Sends a message tuple to all the ServerSocket objects in the group list

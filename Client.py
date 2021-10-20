@@ -33,7 +33,7 @@ class Receive(QThread):
     # group list changed signal
     newGroupsList = pyqtSignal(object)
     # user list in joined group changed signal
-    newUserListInGroup = pyqtSignal(object)
+    newUserListInGroup = pyqtSignal(object, object, object)
     # group message received for the group the user is in signal
     newGroupMessage = pyqtSignal(object, object)
     # invite to a group received
@@ -71,7 +71,8 @@ class Receive(QThread):
                             self.newGroupsList.emit(serverMessage[1])
 
                         elif messageType == ActionType.groupUsersListUpdate:
-                            self.newUserListInGroup.emit(serverMessage[1])
+                            self.newUserListInGroup.emit(
+                                serverMessage[1], serverMessage[2], serverMessage[3])
 
                         elif messageType == ActionType.receiveGroup:
                             self.newGroupMessage.emit(
@@ -136,7 +137,7 @@ class groupInvitePopup:
             Qt.WindowCloseButtonHint, False)
 
         self.groupInviteDialog.ui.label.setText(
-            f"You have an invite from {fromUser}\n To group {toGroup}\n Accept to join or decline to close this popup.")
+            f"You have an invite from {fromUser}\n To group {toGroup}\n Accept to join or decline to close this popup. \n WARNING ACCEPTING THIS INVITE WILL CLOSE ANY CURRENT GROUP CHATS AND OPEN THE NEW ONE!")
 
         self.groupInviteDialog.ui.acceptButton.clicked.connect(
             self.acceptInvite)
@@ -284,7 +285,13 @@ class GroupChatGUIWindow:
         self.inviteUserGUIWindow = None
         InviteUserGUIWindow(self.mainInstance, self)
 
-    def updateUsersInGroupLabels(self, newUserList):
+    def updateUsersInGroupLabels(self, newUserList, joinedUser, leftUser):
+        if len(joinedUser) > 0:
+            self.appendMessageLabel(joinedUser, "has joined the chat!")
+
+        if len(leftUser) > 0:
+            self.appendMessageLabel(leftUser, "has left the chat!")
+
         # Check if invite window open
         if self.inviteUserGUIWindow is not None:
             # update the invite list labels
@@ -669,10 +676,10 @@ class main():
         # update the groups list UI
         self.mainGuiWindow.connectedGUIWindow.updateGroupLabels(newGroupsList)
 
-    def updateUsersInGroupLabels(self, newUserListIngroup):
+    def updateUsersInGroupLabels(self, newUserListIngroup, joinedUser, leftUser):
         # update the users in a group UI
         self.mainGuiWindow.connectedGUIWindow.groupChatGUIWindow.updateUsersInGroupLabels(
-            newUserListIngroup)
+            newUserListIngroup, joinedUser, leftUser)
 
     def gotGroupMessage(self, userFrom, message):
         # append a message we got for the group we are in
